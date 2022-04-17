@@ -7,8 +7,8 @@ import { Link } from "react-router-dom";
 const Header = () => {
   return (
     <Navbar color="info" light>
-      <NavbarBrand className="text-white">LCO Contact App</NavbarBrand>
-      <NavbarText className="text-white float-right">
+      <NavbarBrand tag={Link} to="/" className="text-white">Contact App</NavbarBrand>
+      <NavbarText className="text-white float-right fixed-top text-center p-3">
         A simple Contact app
       </NavbarText>
     </Navbar>

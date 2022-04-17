@@ -20,7 +20,12 @@ const Contacts = () => {
   // will set in state of the contact to update and send it to the contact/add route
   const AddContact = () => {
     //TODO: use dispatch to send user to add contact screen
-    history.push("/contact/add");
+    dispatch({
+      type: CONTACT_TO_UPDATE,
+      payload: null,
+      key: null
+    })
+    history("/contact/add");
   };
 
   // return loading spinner
@@ -36,6 +41,17 @@ const Contacts = () => {
   return (
     <Container className="mt-4">
       {/* TODO: Loop through FIREBASE objects  */}
+      {contacts.length === 0 && !isLoading ? (
+        <div className="Center text-large text-primary">No Contacts Found In Bucket</div>
+      ) :(
+        <ListGroup>
+          {Object.entries(contacts).map(([key, value]) => (
+            <ListGroupItem key={key}>
+              <Contact contact={value} contactKey={key} />
+            </ListGroupItem>
+          ))}
+        </ListGroup>
+      )}
       <MdAdd className="fab icon " onClick={AddContact} />
     </Container>
   );

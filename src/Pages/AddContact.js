@@ -2,7 +2,7 @@
 // https://www.npmjs.com/package/browser-image-resizer#asyncawait
 
 import React, { useState, useContext, useEffect } from "react";
-import firebase from "firebase/app";
+import firebase from "firebase/compat/app";
 
 import {
   Container,
@@ -21,13 +21,15 @@ import { readAndCompressImage } from "browser-image-resizer";
 
 // configs for image resizing
 //TODO: add image configurations
+import { imageConfig } from "../Utils/config.js";
+
 
 import { MdAddCircleOutline } from "react-icons/md";
 
 import { v4 } from "uuid";
 
 // context stuffs
-import {ContactContext} from "../Context/Context.js";
+import { ContactContext } from "../Context/Context.js";
 import { CONTACT_TO_UPDATE } from "../Context/action.types";
 
 import { useNavigate } from "react-router-dom";
@@ -73,22 +75,109 @@ const AddContact = () => {
   // To upload image to firebase and then set the the image link in the state of the app
   const imagePicker = async e => {
     // TODO: upload image and set D-URL to state
+    try {
+      const file = e.target.files[0];
+
+      var metadata = {
+        contentType: file.type
+      }
+      let resizeImage = await readAndCompressImage(file, imageConfig);
+
+      const storageRefrence = await firebase.storage().ref();
+
+      var uploadTask = storageRefrence
+        .child('images/' + file.name)
+        .put(resizeImage, metadata);
+
+      uploadTask.on(
+        firebase.storage.TaskEvent.STATE_CHANGED,
+        snapshot => {
+          setIsUploading(true);
+          var progress = (snapshot.bytesTransferred / snapshot.totalByte) * 100;
+
+          switch (snapshot.state) {
+            case firebase.storage.TaskState.PAUSED:
+              setIsUploading(false)
+              console.log("Upload on halt🛑");
+              break;
+            case firebase.storage.TaskState.RUNNIG:
+              setIsUploading(false)
+              console.log("Upload in Progress...");
+              break;
+          }
+          if (progress === 100) {
+            setIsUploading(false);
+            toast("Woha! SucessFully Uploaded🎉", {
+              type: "success"
+            });
+          }
+        },
+        error => {
+          toast('oops, Something is wrong in state change', { type: "error" })
+        },
+        () => {
+          uploadTask.snapshot.ref.getDownloadURL()
+            .then(downloadURL => {
+              setDownloadUrl(downloadURL);
+            })
+            .catch(err => console.log(err))
+        }
+      );
+
+
+    } catch (error) {
+      console.error(error);
+      toast("Opps! Something got wrong", {
+        type: "error"
+      })
+    }
   };
 
   // setting contact to firebase DB
   const addContact = async () => {
     //TODO: add contact method
+    try {
+      firebase.database()
+        .ref('contacts/' + v4())
+        .set({
+          name, 
+          email, 
+          phoneNumber, 
+          address, 
+          picture: downloadUrl, 
+          star
+        })
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   // to handle update the contact when there is contact in state and the user had came from clicking the contact update icon
   const updateContact = async () => {
     //TODO: update contact method
+    try {
+      firebase.database()
+      .ref('contacts/' + contactToUpdateKey)
+      .set({
+        name,
+        email,
+        phoneNumber,
+        address,
+        picture: downloadUrl,
+        star
+      })
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   // firing when the user click on submit button or the form has been submitted
   const handleSubmit = e => {
     e.preventDefault();
 
+    isUpdate ? updateContact() : addContact()
+
+    toast(`Sucessfully ${isUpdate ? "Updated":"Added"}`,{type:"success"});
     // isUpdate wll be true when the user came to update the contact
     // when their is contact then updating and when no contact to update then adding contact
     //TODO: set isUpdate value
@@ -102,7 +191,7 @@ const AddContact = () => {
 
     // after adding/updating contact then sending to the contacts
     // TODO :- also sending when their is any errors
-    history.push("/");
+    history("/");
   };
 
   // return the spinner when the image has been added in the storage
